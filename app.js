@@ -1,17 +1,31 @@
 const express = require('express');
+const expressLayouts = require('express-ejs-layouts');
 const app = express();
 const port = 3000;
 
+app.set('view engine', 'ejs');
+app.use(expressLayouts);
+
 app.get('/', (req, res) => {
-	res.sendFile('/src/index.html', { root: __dirname });
+	const students = [{
+		name: 'Satria',
+		email: 'satria@example.com'
+	}, {
+		name: 'Aji',
+		email: 'aji@example.com'
+	}, {
+		name: 'Rama',
+		email: 'rama@example.com'
+	}]
+	res.render('index', {name: 'Satria', title: 'Home', students, layout: 'layouts/app'});
 })
 
 app.get('/about', (req, res) => {
-	res.sendFile('/src/about.html', { root: __dirname });
+	res.render('about', {title: 'About', layout: 'layouts/app'});
 })
 
 app.get('/user', (req, res) => {
-	res.sendFile('/src/user.html', { root: __dirname });
+	res.render('user', {title: 'User', layout: 'layouts/app'});
 })
 
 app.get('/user/:id', (req, res) => {
