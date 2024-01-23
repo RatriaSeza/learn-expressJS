@@ -1,6 +1,7 @@
 const express = require('express');
 const expressLayouts = require('express-ejs-layouts');
-const morgan = require('morgan');
+const { loadContacts, findContact } = require('./utils/contacts');
+
 const app = express();
 const port = 3000;
 
@@ -8,16 +9,9 @@ app.set('view engine', 'ejs');
 
 // third-party middleware
 app.use(expressLayouts);
-app.use(morgan('dev'));
 
 // built-in middleware
 app.use(express.static('public'));
-
-// application level middleware
-app.use('/', (req, res, next) => {
-	console.log('Time: ', Date.now());
-	next();
-})
 
 app.get('/', (req, res) => {
 	const students = [{
@@ -37,12 +31,14 @@ app.get('/about', (req, res) => {
 	res.render('about', {title: 'About', layout: 'layouts/app'});
 })
 
-app.get('/user', (req, res) => {
-	res.render('user', {title: 'User', layout: 'layouts/app'});
+app.get('/contact', (req, res) => {
+	const contacts = loadContacts();
+	res.render('contact', {title: 'Contact', layout: 'layouts/app', contacts});
 })
 
-app.get('/user/:id', (req, res) => {
-	res.send(`User ${req.params.id} <br> Role ${req.query.role}`);
+app.get('/contact/:id', (req, res) => {
+	const contact = findContact(req.params.id);
+	res.render('detail', {title: `Contact's Detail`, layout: 'layouts/app', contact});
 })
 
 app.use('/', (req, res) => {
@@ -50,5 +46,5 @@ app.use('/', (req, res) => {
 })
 
 app.listen(port, () => {
-	console.log(`Example app listening at http://localhost:${port}`);
+	console.log(`App listening at http://localhost:${port}`);
 })
