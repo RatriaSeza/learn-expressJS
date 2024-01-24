@@ -1,17 +1,27 @@
 const express = require('express');
 const expressLayouts = require('express-ejs-layouts');
-const { loadContacts, findContact } = require('./utils/contacts');
+const { loadContacts, findContact, addContact, findContactByEmail } = require('./utils/contacts');
+const { body, validationResult, check } = require('express-validator');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
+const flash = require('connect-flash');
 
 const app = express();
 const port = 3000;
 
 app.set('view engine', 'ejs');
+app.use(expressLayouts); // third-party middleware
+app.use(express.static('public')); // built-in middleware
+app.use(express.urlencoded({extended: true})); // built-in middleware
 
-// third-party middleware
-app.use(expressLayouts);
-
-// built-in middleware
-app.use(express.static('public'));
+app.use(cookieParser('secret'));
+app.use(session({
+	cookie: {maxAge: 6000},
+	secret: 'secret',
+	resave: true,
+	saveUninitialized: true
+}));
+app.use(flash());
 
 app.get('/', (req, res) => {
 	const students = [{
@@ -33,8 +43,36 @@ app.get('/about', (req, res) => {
 
 app.get('/contact', (req, res) => {
 	const contacts = loadContacts();
-	res.render('contact', {title: 'Contact', layout: 'layouts/app', contacts});
+	res.render('contact/index', {title: 'Contact', layout: 'layouts/app', contacts, msg: req.flash('msg')});
 })
+
+app.get('/contact/create', (req,res) => {
+	res.render('contact/create', {title: 'Contact | Create Data', layout: 'layouts/app'});
+})
+
+app.post('/contact', 	
+	body('email').custom((value) => {
+		const isDuplicate = findContactByEmail(value); 
+		if (isDuplicate) {
+			throw new Error('Email already registered');
+		}
+		return true;
+	}),
+	check('email', 'Invalid email format').isEmail(),
+	check('name', 'Invalid name, min 3 characters').isLength({min: 3}),
+	check('phoneNumber', 'Invalid phone number, min 11 characters').isLength({min: 11}),
+	check('phoneNumber', 'Invalid phone number').isMobilePhone(),
+	(req, res) => {
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			res.render('contact/create', {title: 'Contact | Create Data', layout: 'layouts/app', errors: errors.array()});
+		} else {
+			addContact(req.body);
+			req.flash('msg', 'Data contact successfully added');
+			res.redirect('/contact');
+		}
+	}
+);
 
 app.get('/contact/:id', (req, res) => {
 	const contact = findContact(req.params.id);
