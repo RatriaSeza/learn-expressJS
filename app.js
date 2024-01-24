@@ -1,6 +1,9 @@
+/**
+ * Module dependencies.
+ */
 const express = require('express');
 const expressLayouts = require('express-ejs-layouts');
-const { loadContacts, findContact, addContact, findContactByEmail } = require('./utils/contacts');
+const { loadContacts, findContact, addContact, findContactByEmail, updateContact,deleteContact } = require('./utils/contacts');
 const { body, validationResult, check } = require('express-validator');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
@@ -23,6 +26,10 @@ app.use(session({
 }));
 app.use(flash());
 
+/**
+ * Home route.
+ * Renders the index page with student data.
+ */
 app.get('/', (req, res) => {
 	const students = [{
 		name: 'Satria',
@@ -37,19 +44,35 @@ app.get('/', (req, res) => {
 	res.render('index', {name: 'Satria', title: 'Home', students, layout: 'layouts/app'});
 })
 
+/**
+ * About route.
+ * Renders the about page.
+ */
 app.get('/about', (req, res) => {
 	res.render('about', {title: 'About', layout: 'layouts/app'});
 })
 
+/**
+ * Contact route.
+ * Renders the contact page with contact data.
+ */
 app.get('/contact', (req, res) => {
 	const contacts = loadContacts();
 	res.render('contact/index', {title: 'Contact', layout: 'layouts/app', contacts, msg: req.flash('msg')});
 })
 
+/**
+ * Create contact route.
+ * Renders the create contact page.
+ */
 app.get('/contact/create', (req,res) => {
 	res.render('contact/create', {title: 'Contact | Create Data', layout: 'layouts/app'});
 })
 
+/**
+ * Add contact route.
+ * Handles the form submission to add a new contact.
+ */
 app.post('/contact', 	
 	body('email').custom((value) => {
 		const isDuplicate = findContactByEmail(value); 
@@ -74,15 +97,78 @@ app.post('/contact',
 	}
 );
 
+/**
+ * Add delete route.
+ * Handles the form submission to delete a contact.
+ */
+app.get('/contact/:id/delete', (req, res) => {
+	const contact = findContact(req.params.id);
+	if (!contact) {
+		res.status(404).send('404 Not Found');
+	} else {
+		deleteContact(req.params.id);
+		req.flash('msg', 'Data contact successfully deleted');
+		res.redirect('/contact');
+	}
+})
+
+/**
+ * Edit contact route.
+ * Renders the Edit contact page.
+ */
+app.get('/contact/:id/edit', (req,res) => {
+	const contact = findContact(req.params.id);
+	res.render('contact/edit', {title: 'Contact | Edit Data', layout: 'layouts/app', contact});
+})
+
+/**
+ * Update contact route.
+ * Handles the form submission to update a new contact.
+ */
+app.post('/contact/:id/update',
+	body('email').custom((value, { req }) => {
+		const isDuplicate = findContactByEmail(value); 
+		if (isDuplicate && value !== req.body.oldEmail) {
+			throw new Error('Email already registered');
+		}
+		return true;
+	}),
+	check('email', 'Invalid email format').isEmail(),
+	check('name', 'Invalid name, min 3 characters').isLength({min: 3}),
+	check('phoneNumber', 'Invalid phone number, min 11 characters').isLength({min: 11}),
+	check('phoneNumber', 'Invalid phone number').isMobilePhone(),
+	(req, res) => {
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			res.render('contact/edit', {title: 'Contact | Edit Data', layout: 'layouts/app', errors: errors.array(), contact: findContact(req.params.id)});
+		} else {
+			updateContact(req.params.id, req.body);
+			req.flash('msg', 'Data contact successfully updated');
+			res.redirect('/contact');
+		}
+	}
+)
+
+/**
+ * Contact detail route.
+ * Renders the detail page for a specific contact.
+ */
 app.get('/contact/:id', (req, res) => {
 	const contact = findContact(req.params.id);
 	res.render('detail', {title: `Contact's Detail`, layout: 'layouts/app', contact});
 })
 
+/**
+ * 404 route.
+ * Handles all other routes that are not defined.
+ */
 app.use('/', (req, res) => {
 	res.status(404).send('Page not found');
 })
 
+/**
+ * Start the server.
+ */
 app.listen(port, () => {
 	console.log(`App listening at http://localhost:${port}`);
 })

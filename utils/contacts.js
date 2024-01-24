@@ -50,5 +50,19 @@ const generateKey = () => {
 	return maxKey + 1; 
 }
 
+const deleteContact = (id) => {
+	const contacts = loadContacts();
+	const filteredContacts = contacts.filter((contact) => contact.id != id);
+	saveContatcs(filteredContacts);
+}
 
-module.exports = { loadContacts, findContact, addContact, findContactByEmail }
+const updateContact = (id, request) => {
+	const contacts = loadContacts();
+	const filteredContacts = contacts.filter((contact) => contact.id != id);
+	delete request.oldEmail;
+	request.id = parseInt(id);
+	filteredContacts.push(request);
+	saveContatcs(filteredContacts);
+}
+
+module.exports = { loadContacts, findContact, addContact, findContactByEmail, updateContact, deleteContact }
